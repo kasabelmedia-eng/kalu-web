@@ -1,0 +1,6 @@
+{
+  "name": "ToonHub Hero Carousel",
+  "description": "An interactive hero section with 3D figurines, dynamic background colors, and scroll/swipe carousel navigation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
