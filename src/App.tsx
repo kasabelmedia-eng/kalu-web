@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, useScroll, useMotionValueEvent } from 'motion/react';
 
 // 1. Array updated to match your photos & background colors!
@@ -208,16 +208,63 @@ function HeroSection() {
         </div>
       </div>
     </div>
-    </div>
+  </div>
   );
 }
 
 export default function App() {
+  const [formStatus, setFormStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
+  const [statusMessage, setStatusMessage] = useState('');
+
   const fadeInUp = {
     initial: { opacity: 0, y: 40 },
     whileInView: { opacity: 1, y: 0 },
     viewport: { once: true, margin: "-100px" },
     transition: { duration: 0.8, ease: "easeOut" }
+  };
+
+  const handleContactSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setFormStatus('submitting');
+    setStatusMessage('');
+
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    const name = String(formData.get('name') || '').trim();
+    const email = String(formData.get('email') || '').trim();
+    const message = String(formData.get('message') || '').trim();
+
+    if (!name || !email || !message) {
+      setFormStatus('error');
+      setStatusMessage('ALL FIELDS ARE REQUIRED.');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name, email, message }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setFormStatus('success');
+        setStatusMessage('[ TRANSMISSION SUCCESSFUL ] OUR TEAM WILL RESPOND PROMPTLY.');
+        form.reset();
+      } else {
+        setFormStatus('error');
+        setStatusMessage(data.error ? data.error.toUpperCase() : 'TRANSMISSION FAILED.');
+      }
+    } catch {
+      // Fallback if API server is not running (e.g. dev mode without server)
+      window.location.href = `mailto:kasabelmedia@gmail.com?subject=Contact from ${encodeURIComponent(name)}&body=${encodeURIComponent(message)}`;
+      setFormStatus('success');
+      setStatusMessage('[ TRANSMISSION INITIATED VIA MAIL CLIENT ]');
+    }
   };
 
   return (
@@ -281,7 +328,7 @@ export default function App() {
           </motion.section>
 
           {/* Big Text Block */}
-          <motion.section {...fadeInUp} className="mb-16 sm:mb-32 mt-24 sm:mt-40 border-t border-white/20 pt-16 سم:pt-24 relative">
+          <motion.section {...fadeInUp} className="mb-16 sm:mb-32 mt-24 sm:mt-40 border-t border-white/20 pt-16 sm:pt-24 relative">
              <h2 className="text-[3.5rem] sm:text-[6.5vw] font-['Anton'] leading-[0.85] tracking-tight uppercase max-w-6xl -ml-1">
                 WE DON'T JUST<br/>WEAR CLOTHES,<br/>WE TELL STORIES
              </h2>
@@ -372,28 +419,21 @@ export default function App() {
                   </div>
                </div>
                
-               <form className="space-y-8 font-mono text-[10px] uppercase tracking-[0.15em]" onSubmit={(e) => {
-                 e.preventDefault();
-                 const formData = new FormData(e.currentTarget);
-                 const name = formData.get('name');
-                 const email = formData.get('email');
-                 const message = formData.get('message');
-                 window.location.href = `mailto:kasabelmedia@gmail.com?subject=Contact from ${name}&body=${message} (%0A%0AFrom: ${email})`;
-               }}>
+               <form className="space-y-8 font-mono text-[10px] uppercase tracking-[0.15em]" onSubmit={handleContactSubmit}>
                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                    <div className="space-y-3">
                      <label className="opacity-70 flex items-center justify-between">
                        <span>[ NAME ]</span>
                        <span className="opacity-30">01</span>
                      </label>
-                     <input name="name" required type="text" className="w-full bg-transparent border-b border-white/30 px-0 py-3 text-white focus:outline-none focus:border-white transition-colors rounded-none placeholder:text-white/20 placeholder:tracking-[0.1em]" placeholder="ENTER IDENTIFIER" />
+                     <input name="name" required type="text" maxLength={100} className="w-full bg-transparent border-b border-white/30 px-0 py-3 text-white focus:outline-none focus:border-white transition-colors rounded-none placeholder:text-white/20 placeholder:tracking-[0.1em]" placeholder="ENTER IDENTIFIER" />
                    </div>
                    <div className="space-y-3">
                      <label className="opacity-70 flex items-center justify-between">
                        <span>[ EMAIL ]</span>
                        <span className="opacity-30">02</span>
                      </label>
-                     <input name="email" required type="email" className="w-full bg-transparent border-b border-white/30 px-0 py-3 text-white focus:outline-none focus:border-white transition-colors rounded-none placeholder:text-white/20 placeholder:tracking-[0.1em]" placeholder="ENTER COMMS" />
+                     <input name="email" required type="email" maxLength={100} className="w-full bg-transparent border-b border-white/30 px-0 py-3 text-white focus:outline-none focus:border-white transition-colors rounded-none placeholder:text-white/20 placeholder:tracking-[0.1em]" placeholder="ENTER COMMS" />
                    </div>
                  </div>
                  <div className="space-y-3 pt-6">
@@ -401,11 +441,18 @@ export default function App() {
                      <span>[ MESSAGE ]</span>
                      <span className="opacity-30">03</span>
                    </label>
-                   <textarea name="message" required rows={5} className="w-full bg-transparent border-b border-white/30 px-0 py-3 text-white focus:outline-none focus:border-white transition-colors rounded-none placeholder:text-white/20 placeholder:tracking-[0.1em] resize-none" placeholder="INITIATE PROTOCOL"></textarea>
+                   <textarea name="message" required rows={5} maxLength={1000} className="w-full bg-transparent border-b border-white/30 px-0 py-3 text-white focus:outline-none focus:border-white transition-colors rounded-none placeholder:text-white/20 placeholder:tracking-[0.1em] resize-none" placeholder="INITIATE PROTOCOL"></textarea>
                  </div>
+
+                 {statusMessage && (
+                   <div className={`p-4 border text-[9px] uppercase tracking-[0.15em] ${formStatus === 'error' ? 'border-red-400/50 text-red-300 bg-red-950/20' : 'border-white/40 text-white bg-white/5'}`}>
+                     {statusMessage}
+                   </div>
+                 )}
+
                  <div className="pt-8 flex justify-end">
-                   <button type="submit" className="border border-white hover:bg-white hover:text-[#7a8b99] text-white px-12 py-4 transition-colors font-bold tracking-[0.2em]">
-                     [ TRANSMIT ]
+                   <button type="submit" disabled={formStatus === 'submitting'} className="border border-white hover:bg-white hover:text-[#7a8b99] text-white px-12 py-4 transition-colors font-bold tracking-[0.2em] disabled:opacity-50 disabled:cursor-not-allowed">
+                     {formStatus === 'submitting' ? '[ TRANSMITTING... ]' : '[ TRANSMIT ]'}
                    </button>
                  </div>
                </form>
